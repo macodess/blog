@@ -1,2 +1,2 @@
 from .home import home
-from .contacts import contacts   
+from .contacts import contacts
