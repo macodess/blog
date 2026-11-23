@@ -34,7 +34,7 @@ class Post(models.Model):
     is_comment = models.BooleanField('Permitir comentários', default=True)
     is_active = models.BooleanField('Ativo', default=True)
     is_deleted = models.BooleanField('Excluído', default=False)
-
+ 
     objects = PostManager()         # Por padrão, só posts não apagados
     all_objects = models.Manager()  # Permite acesso irrestrito, incluindo posts apagados
 
