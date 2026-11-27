@@ -1,9 +1,22 @@
-# blog/models.py
+# blog\models.py
  
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser, UserManager as BaseUserManager
+from django.templatetags.static import static
+import uuid
+ 
+ 
+def profile_image_path(instance, filename):
+ 
+    # Obtém a extensão original do arquivo
+    extension = filename.rsplit('.', 1)[-1].lower()
+ 
+    # Gera um nome único para a imagem
+    filename = f'{uuid.uuid4().hex}.{extension}'
+ 
+    return f'profiles/{filename}'
  
  
 class UserManager(BaseUserManager):
@@ -26,7 +39,7 @@ class User(AbstractUser):
     birth_date = models.DateField('Data de nascimento', null=True, blank=True)
  
     # Thumbnail
-    image = models.ImageField('Foto de perfil', upload_to='profiles/', null=True, blank=True)
+    image = models.ImageField('Foto de perfil', upload_to=profile_image_path, null=True, blank=True)
  
     # Dados adicionais
     metadata = models.TextField('Informações', null=True, blank=True)
@@ -37,9 +50,34 @@ class User(AbstractUser):
     objects = UserManager()             # Por padrão, só 'User' não apagado
     all_objects = models.Manager()      # Permite acesso irrestrito, incluindo 'User' apagado
  
+    # Se não tem imagem de perfil, usa a imagem padrão
+    # Use `user.image_url` para esse recurso
+    @property
+    def image_url(self):
+        if self.image and hasattr(self.image, 'url'):
+            return self.image.url
+        return static('img/anonimous.jpg')
+ 
     class Meta:
         verbose_name = 'Usuário'
         verbose_name_plural = 'Usuários'
+ 
+    def save(self, *args, **kwargs):
+ 
+        # Recupera a imagem atualmente armazenada
+        old_image = None
+ 
+        if self.pk:
+            old_image = User.all_objects.filter(
+                pk=self.pk
+            ).values_list('image', flat=True).first()
+ 
+        # Salva o usuário e a nova imagem
+        super().save(*args, **kwargs)
+ 
+        # Remove a imagem anterior, caso tenha sido substituída
+        if old_image and old_image != self.image.name:
+            self.image.storage.delete(old_image)
  
     def __str__(self):
         return self.name
